@@ -1,0 +1,98 @@
+#!/usr/bin/env python3
+import argparse
+import datetime
+
+from PyBS import PyBSclient, RpcError
+
+
+def main():
+    # parser
+    parser = argparse.ArgumentParser(description='PyBS CLI')
+    subparsers = parser.add_subparsers(dest='method')
+
+    sp_stat = subparsers.add_parser('stat', help='job stats')
+    sp_stat.add_argument('-n', '--finished', type=int, help='number of finished jobs to show', default=5)
+    sp_stat.add_argument('-p', '--path', action='store_true', help='show filename of script instead of job name')
+    sp_stat.set_defaults(func=stat)
+
+    sp_submit = subparsers.add_parser('sub', help='submit a job')
+    sp_submit.add_argument('filename', type=str, help='filename of script to run')
+    sp_submit.set_defaults(func=submit)
+
+    sp_remove = subparsers.add_parser('del', help='delete a job')
+    sp_remove.add_argument('job_id', type=int, help='id of job to delete')
+    sp_remove.set_defaults(func=remove)
+
+    # parse
+    args = parser.parse_args()
+
+    # and call method
+    if hasattr(args, "func"):
+        args.func(args)
+    else:
+        parser.print_help()
+
+
+def stat(args):
+    # create client
+    client = PyBSclient()
+
+    # list all running, all waiting, and up to 5 finished jobs
+    jobs = client.list(started=True, finished=False) + \
+           client.list(started=False) + \
+           client.list(finished=True, limit=args.finished)
+
+    # print header
+    print('Job ID  Username    nCPUs Prio State Node       Elapsed    %s' % ('Path' if args.path else 'Name',))
+    print('------  --------    ----- ---- ----- ----       -------    ----')
+
+    # loop jobs
+    for job in jobs:
+        # format elapsed time
+        job['elapsed'] = '--'
+        if job['started'] is not None:
+            if job['finished'] is None:
+                elapsed = datetime.datetime.now().timestamp() - job['started']
+            else:
+                elapsed = job['finished'] - job['started']
+            hours, remainder = divmod(elapsed, 3600)
+            minutes, seconds = divmod(remainder, 60)
+            job['elapsed'] = '{0:02d}h{1:02d}m{2:02d}s'.format(int(hours), int(minutes), int(seconds))
+
+        # get values
+        job['state'] = 'Done' if job['started'] is not None and job['finished'] is not None else \
+                       'Run' if job['started'] is not None else 'Wait'
+        job['nodes'] = '--' if job['nodes'] is None else job['nodes']
+
+        # name or filename?
+        job['show_name'] = job['filename'] if args.path else job['name']
+
+        # format line
+        print('{id:<7d} {username:11s} {ncores:<5d} {priority:<4d} {state:5s} {nodes:10s} {elapsed:10s} {show_name:s}'
+              .format(**job))
+
+
+def submit(args):
+    # create client
+    client = PyBSclient()
+
+    # remove job
+    try:
+        client.submit(args.filename)
+    except RpcError as e:
+        print('Could not submit job: %s' % str(e))
+
+
+def remove(args):
+    # create client
+    client = PyBSclient()
+
+    # remove job
+    try:
+        client.remove(args.job_id)
+    except RpcError as e:
+        print('Could not delete job: %s' % str(e))
+
+
+if __name__ == '__main__':
+    main()
