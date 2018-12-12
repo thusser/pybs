@@ -6,6 +6,11 @@
     * [Database](#database)
     * [Configuration](#configuration)
     * [systemd](#systemd)
+* [Usage](#usage)
+    * [Aliases](#aliases)
+    * [Submitting a job](#submitting-a-job)
+    * [Deleting a job](#deleting-a-job)
+    * [Job list](#job-list)
 
 ## Installation
 
@@ -57,7 +62,7 @@ when calling `pybsd`. A typical configuration looks like this:
     # sqlite:
     #   sqlite:///path/to/database.db
     #   E.g.: sqlite:///home/pybs/pybs.db
-    database    = sqlite:///home/pybs/pybs.db
+    database    = sqlite:////home/pybs/pybs.db
     
     # Root directory
     # The root directory is only important on multi-node systems, i.e. running on different machines. The script
@@ -87,3 +92,56 @@ In order to start PyBS as a service, create a systemd configuration file /usr/li
     WantedBy=multi-user.target
 
 Now you can start/stop *PyBS* via `service pybs start/stop`.
+
+## Usage
+
+After the *PyBS* daemon *pybsd* has been started, the command line interface `pybs` can be used for accessing 
+the system. 
+
+### Aliases
+
+If you are used to a PBS system like [Torque](http://www.adaptivecomputing.com/products/torque/), you might want
+to create aliases to mimic its behaviour:
+
+    alias qsub='pybs sub'
+    alias qdel='pybs del'
+    alias qstat='pybs stat'
+
+### Submitting a job
+
+A new job can easily be submitted to the system using the `pybs sub` (or `qsub`) command:
+
+    pybs sub /path/to/script
+    
+The script must be executable and contain a PBS header with at least a name and the number of requested CPU cores:
+
+    #PBS -N NameOfJob
+    #PBS -l ncpus=4
+    
+Furthermore you can define files where stdout and stderr will be written to:
+
+    #PBS -o output
+    #PBS -e error
+    
+Please note that all pathes are relative to the path of the script itself and that the working directory of the 
+script itself is always its path.
+
+A job can be limited to one or more nodes, which can also be defined in the header as comma-separated list:
+
+    #PBS -nodes nodeA,nodeB
+    
+After successfully submitting a job, its ID will be written to standard output.
+
+### Deleting a job
+
+A waiting or running job can be deleted via `pybs del` (or `qdel`):
+
+    pybs del <id>
+    
+with the ID of the job. If the job is actually running, its process will be terminated by sending a SIGKILL signal.
+
+### Job list
+
+A list of waiting and running jobs is shown when calling:
+
+    pybs stat
