@@ -15,15 +15,14 @@ log = logging.getLogger(__name__)
 
 
 class PyBSdaemon:
-    def __init__(self, db_connect, ncores=4, root_dir='/'):
+    def __init__(self, database, ncores=4, root_dir='/', mailer=None):
         self._rpc_server = RpcServer(self, 8888)
         self._task = None
         self._ncores = ncores
-        self._root_dir = '/'
-
-        self._db = Database(db_connect)
+        self._root_dir = root_dir
+        self._db = database
+        self._mailer = mailer
         self._hostname = socket.gethostname()
-
         self._processes = {}
 
     async def open(self):
@@ -95,6 +94,8 @@ class PyBSdaemon:
         return True
 
     async def run_job(self, job_id):
+        header = {}
+
         try:
             # get job
             with self._db() as session:
@@ -130,9 +131,6 @@ class PyBSdaemon:
             outs, errs = await proc.communicate()
             return_code = proc.returncode
 
-            # success?
-            success = return_code == 0
-
             # write output and error
             for kind, lines in [('output', outs), ('error', errs)]:
                 try:
@@ -162,6 +160,11 @@ class PyBSdaemon:
 
                 # set finished and PID
                 job.finished = datetime.datetime.now()
+
+                # send email?
+                if 'send_mail' in header and 'email' in header and self._mailer is not None:
+                    # really send?
+                    self._mailer.send(header, job, return_code, outs, errs)
 
         # log it
         log.info('Finished job %d from %s...', job_id, filename)
