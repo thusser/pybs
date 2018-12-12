@@ -7,8 +7,7 @@ import socket
 import datetime
 import subprocess
 
-from .rpcserver import RpcServer
-from .db import Database, Job
+from .db import Job
 
 
 log = logging.getLogger(__name__)
@@ -16,7 +15,6 @@ log = logging.getLogger(__name__)
 
 class PyBSdaemon:
     def __init__(self, database, ncores=4, root_dir='/', mailer=None):
-        self._rpc_server = RpcServer(self, 8888)
         self._task = None
         self._ncores = ncores
         self._root_dir = root_dir
@@ -25,13 +23,11 @@ class PyBSdaemon:
         self._hostname = socket.gethostname()
         self._processes = {}
 
-    async def open(self):
-        await self._rpc_server.open()
+        # start periodic task
         self._task = asyncio.ensure_future(self._process_jobs())
 
-    async def close(self):
-        self._rpc_server.close()
-        await self._rpc_server.wait_closed()
+    def close(self):
+        self._task.cancel()
 
     def _get_used_cpus(self, session):
         # get sum of Ncpu for running jobs

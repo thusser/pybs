@@ -1,8 +1,5 @@
 import asyncio
 import json
-import argparse
-import pwd
-import os
 
 
 class RpcError(Exception):
@@ -10,8 +7,10 @@ class RpcError(Exception):
 
 
 class RpcClient:
-    def __init__(self):
+    def __init__(self, host='localhost', port=16219):
         self._cur_id = 1
+        self._host = host
+        self._port = port
 
     def __call__(self, command, **kwargs):
         # get event loop, run command and return result
@@ -21,7 +20,7 @@ class RpcClient:
 
     async def _send_command(self, command, **kwargs):
         # open connection
-        reader, writer = await asyncio.open_connection('127.0.0.1', 8888)
+        reader, writer = await asyncio.open_connection(self._host, self._port)
 
         # build message
         message = {

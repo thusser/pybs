@@ -8,6 +8,7 @@ from itertools import chain
 from PyBS import PyBSdaemon
 from PyBS.db import Database
 from PyBS.mailer import Mailer
+from PyBS.rpcserver import RpcServer
 
 
 def main():
@@ -27,20 +28,24 @@ def main():
     logging.basicConfig(level=logging.DEBUG)
     log = logging.getLogger(__name__)
 
+    # create database
+    database = Database(config.get('database'))
+
     # create mailer
     mailer = Mailer(
         sender=config.get('mail-from', None),
         host=config.get('mail-host', None)
     )
 
-    # create database
-    database = Database(config.get('database'))
-
     # get asyncio event loop
     loop = asyncio.get_event_loop()
 
+    # init
+    daemon = None
+    server = None
+
     try:
-        # create PyBS daemon and open it
+        # create PyBS daemon
         log.info('Starting PyBS daemon...')
         daemon = PyBSdaemon(
             database=database,
@@ -48,7 +53,10 @@ def main():
             ncores=int(config.get('ncores', 4)),
             root_dir=config.get('root', '/')
         )
-        loop.run_until_complete(daemon.open())
+
+        # create RPC server and open it, default port is 16219 (P=16, B=2, S=19)
+        server = RpcServer(daemon, config.get('port', 16219))
+        loop.run_until_complete(server.open())
 
         # run until interrupt
         loop.run_forever()
@@ -57,8 +65,12 @@ def main():
         log.info('Shutting down...')
 
     finally:
-        # close PyBS daemon
-        loop.run_until_complete(daemon.close())
+        # close PyBS daemon and server
+        if daemon is not None:
+            daemon.close()
+        if server is not None:
+            server.close()
+            loop.run_until_complete(server.wait_closed())
 
 
 if __name__ == '__main__':
