@@ -27,6 +27,10 @@ class Mailer:
         self._host = host
 
     def send(self, header, job, return_code, outs, errs):
+        # no sender or host given?
+        if self._sender is None or self._host is None:
+            return
+
         # was an email requested for this return code?
         mode = header['send_mail']
         if ('a' in mode and return_code == 0) or ('e' in mode and return_code != 0):
