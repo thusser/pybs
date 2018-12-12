@@ -1,11 +1,10 @@
-import os
-import re
 from contextlib import contextmanager
 from sqlalchemy import MetaData, create_engine, event
 from sqlalchemy.exc import DisconnectionError
 from sqlalchemy.orm import sessionmaker
 
 from .base import Base
+from .job import Job
 
 
 class Database(object):
@@ -32,6 +31,10 @@ class Database(object):
                 dbapi_con.ping(False)
             except TypeError:
                 dbapi_con.ping()
+            except AttributeError:
+                # db doesn't seem to support pings...
+                pass
+
         except dbapi_con.OperationalError as exc:
             if exc.args[0] in (2006, 2013, 2014, 2045, 2055):
                 raise DisconnectionError()
@@ -50,9 +53,6 @@ class Database(object):
             raise
         finally:
             session.close()
-
-
-from .job import Job
 
 
 __all__ = ['Database', 'Job']

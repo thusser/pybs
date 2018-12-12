@@ -63,15 +63,22 @@ class PyBSdaemon:
 
     async def _start_job(self, session, available_cores):
         # find job to process and lock row
-        job = session \
-            .query(Job) \
-            .filter(Job.started == None) \
-            .filter(Job.finished == None) \
-            .filter(Job.ncores <= available_cores) \
-            .filter(or_(Job.nodes == None, func.find_in_set(self._hostname, Job.nodes) > 0)) \
-            .order_by(Job.priority, Job.submitted.asc()) \
-            .with_for_update() \
-            .first()
+        query = session.query(Job)
+
+        # not started, not finished, not too many requested cores
+        query = query.filter(Job.started == None, Job.finished == None, Job.ncores <= available_cores) \
+
+        # if nodes is not NULL, _hostname must be at beginning, between two commas, or at end of nodes
+        # this looks simpler, but works on MySQL only:
+        #   .filter(or_(Job.nodes == None, func.find_in_set(self._hostname, Job.nodes) > 0))
+        query = query.filter(or_(Job.nodes == None, Job.nodes.like(self._hostname + ',%'),
+                                 Job.nodes.like('%,' + self._hostname + '%,'), Job.nodes.like('%,' + self._hostname)))
+
+        # sort by priority and by oldest first
+        query = query.order_by(Job.priority, Job.submitted.asc())
+
+        # lock row for later update and pick first
+        job = query.with_for_update().first()
 
         # none available?
         if job is None:
