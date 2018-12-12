@@ -1,10 +1,7 @@
-import asyncio
-import json
-import argparse
 import pwd
 import os
 
-from .rpcclient import RpcClient, RpcError
+from .rpcclient import RpcClient
 
 
 class PyBSclient:

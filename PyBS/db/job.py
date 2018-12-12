@@ -1,10 +1,7 @@
 import datetime
-import logging
 import os
-import pwd
 import re
 from sqlalchemy import Column, Integer, String, DateTime
-from sqlalchemy.ext.declarative import declarative_base
 
 from .base import Base
 
