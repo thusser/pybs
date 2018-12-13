@@ -14,9 +14,9 @@ log = logging.getLogger(__name__)
 
 
 class PyBSdaemon:
-    def __init__(self, database, ncores=4, root_dir='/', mailer=None):
+    def __init__(self, database, ncpus=4, root_dir='/', mailer=None):
         self._task = None
-        self._ncores = ncores
+        self._ncpus = ncpus
         self._root_dir = root_dir
         self._db = database
         self._mailer = mailer
@@ -32,7 +32,7 @@ class PyBSdaemon:
     def _get_used_cpus(self, session):
         # get sum of Ncpu for running jobs
         ncpus = session \
-            .query(func.sum(Job.ncores)) \
+            .query(func.sum(Job.ncpus)) \
             .filter(Job.started != None) \
             .filter(Job.finished == None) \
             .first()
@@ -47,7 +47,7 @@ class PyBSdaemon:
                 # start as many jobs as possible
                 while True:
                     # number of available cores
-                    available_cores = self._ncores - self._get_used_cpus(session)
+                    available_cores = self._ncpus - self._get_used_cpus(session)
 
                     # start job if possible
                     if not await self._start_job(session, available_cores):
@@ -61,7 +61,7 @@ class PyBSdaemon:
         query = session.query(Job)
 
         # not started, not finished, not too many requested cores
-        query = query.filter(Job.started == None, Job.finished == None, Job.ncores <= available_cores) \
+        query = query.filter(Job.started == None, Job.finished == None, Job.ncpus <= available_cores) \
 
         # if nodes is not NULL, _hostname must be at beginning, between two commas, or at end of nodes
         # this looks simpler, but works on MySQL only:
@@ -207,7 +207,7 @@ class PyBSdaemon:
                     'id': job.id,
                     'name': job.name,
                     'username': job.username,
-                    'ncores': job.ncores,
+                    'ncpus': job.ncpus,
                     'priority': job.priority,
                     'nodes': job.nodes,
                     'filename': os.path.join(self._root_dir, job.filename),

@@ -8,7 +8,23 @@ from .job import Job
 
 
 class Database(object):
-    def __init__(self, connect):
+    """Manages the database connection for PyBS."""
+
+    def __init__(self, connect: str):
+        """Creates a new Database object.
+
+        Examples for connect URI:
+            * MySQL:
+              mysql://pybs:pybs@localhost:3306/pybs
+            * sqlite:
+              sqlite:///home/pybs/pybs.db
+
+        More examples at https://docs.sqlalchemy.org/en/latest/core/engines.html#
+
+        Args:
+            connect: URI for database connection.
+        """
+
         # create engine
         self._engine = create_engine(connect)
         self._engine.echo = False
@@ -25,7 +41,11 @@ class Database(object):
 
     @staticmethod
     def _checkout_listener(dbapi_con, con_record, con_proxy):
-        # see https://stackoverflow.com/questions/18054224/python-sqlalchemy-mysql-server-has-gone-away
+        """Prevent MySQL timeouts.
+
+        Taken from:
+        https://stackoverflow.com/questions/18054224/python-sqlalchemy-mysql-server-has-gone-away
+        """
         try:
             try:
                 dbapi_con.ping(False)
@@ -34,7 +54,6 @@ class Database(object):
             except AttributeError:
                 # db doesn't seem to support pings...
                 pass
-
         except dbapi_con.OperationalError as exc:
             if exc.args[0] in (2006, 2013, 2014, 2045, 2055):
                 raise DisconnectionError()

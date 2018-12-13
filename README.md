@@ -53,7 +53,7 @@ The default location for the configuration is /etc/pybs, but you can change that
 when calling `pybsd`. A typical configuration looks like this:
 
     # Maximum number of CPU cores to use
-    ncores      = 8
+    ncpus      = 8
     
     # Database connection
     # MySQL:

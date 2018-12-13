@@ -68,7 +68,7 @@ def stat(args):
         job['show_name'] = job['filename'] if args.path else job['name']
 
         # format line
-        print('{id:<7d} {username:11s} {ncores:<5d} {priority:<4d} {state:5s} {nodes:10s} {elapsed:10s} {show_name:s}'
+        print('{id:<7d} {username:11s} {ncpus:<5d} {priority:<4d} {state:5s} {nodes:10s} {elapsed:10s} {show_name:s}'
               .format(**job))
 
 

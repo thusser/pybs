@@ -7,13 +7,14 @@ from .base import Base
 
 
 class Job(Base):
+    """A single job in the database."""
     __tablename__ = 'job'
 
     id = Column(Integer, comment='unique ID for job', primary_key=True)
     name = Column(String(100), comment='job name', index=True, nullable=False)
     username = Column(String(20), comment='submitting user', nullable=False)
     filename = Column(String(200), comment='filename of submitted script', nullable=False)
-    ncores = Column(Integer, comment='number of requested CPUs', nullable=False)
+    ncpus = Column(Integer, comment='number of requested CPUs', nullable=False)
     priority = Column(Integer, comment='priority of job', nullable=False, default=0)
     nodes = Column(String(100), comment='run job only on nodes in this comma-separated list')
     node = Column(String(100), comment='node that job actually runs/ran on')
@@ -23,10 +24,10 @@ class Job(Base):
     finished = Column(DateTime, comment='date and time of execution end')
 
     @staticmethod
-    def parse_pbs_header(filename):
+    def parse_pbs_header(filename: str) -> dict:
         """Parse the PBS header in the file connected to this job.
 
-        Example:
+        Example for a PBS header:
         #PBS -l ncpus=20
         #PBS -N {{JOBNAME}}
         #PBS -e {{PATH}}/{{NAME}}.error
@@ -34,8 +35,11 @@ class Job(Base):
         #PBS -m a
         #PBS -M musegc@astro.physik.uni-goettingen.de
 
-        :return:
-        Dictionary with all header items.
+        Args:
+            filename: Name of file to parse.
+
+        Returns:
+            Dictionary with all header items.
         """
 
         # compile regexp
@@ -70,7 +74,16 @@ class Job(Base):
         return header
 
     @staticmethod
-    def from_file(filename):
+    def from_file(filename: str) -> 'Job':
+        """Create a new Job object from a given script file.
+
+        Args:
+            filename: Name of file to parse PBS header from.
+
+        Returns:
+            New job created from file.
+        """
+
         # file exists?
         if not os.path.exists(filename):
             raise ValueError('File does not exist.')
@@ -79,8 +92,6 @@ class Job(Base):
         job = Job()
 
         # fill basic stuff
-        #job.Username = pwd.getpwuid(os.getuid()).pw_name
-        #job.Filename = Config.rel_path(os.path.abspath(filename))
         job.submitted = datetime.datetime.now()
 
         # parse header
@@ -94,7 +105,7 @@ class Job(Base):
 
         # fill rest
         job.name = header['name']
-        job.ncores = header['ncpus']
+        job.ncpus = header['ncpus']
         if 'nodes' in header:
             job.nodes = header['nodes']
 

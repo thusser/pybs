@@ -50,7 +50,7 @@ def main():
         daemon = PyBSdaemon(
             database=database,
             mailer=mailer,
-            ncores=int(config.get('ncores', 4)),
+            ncpus=int(config.get('ncpus', 4)),
             root_dir=config.get('root', '/')
         )
 
