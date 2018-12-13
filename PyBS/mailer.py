@@ -33,7 +33,7 @@ class Mailer:
 
         # was an email requested for this return code?
         mode = header['send_mail']
-        if ('a' in mode and return_code == 0) or ('e' in mode and return_code != 0):
+        if ('e' not in mode and return_code == 0) or ('a' not in mode and return_code != 0):
             return
 
         # out and err
