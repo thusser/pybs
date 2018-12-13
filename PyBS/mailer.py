@@ -50,7 +50,7 @@ class Mailer:
         msg = MIMEText(body)
         msg['From'] = self._sender
         msg['To'] = header['email']
-        msg['Subject'] = 'PyBS JOB {0} {1} {2}'.format(job.id, job.Name, 'finished' if return_code == 0 else 'failed')
+        msg['Subject'] = 'PyBS JOB {0} {1} {2}'.format(job.id, job.name, 'finished' if return_code == 0 else 'failed')
 
         # send email
         try:
