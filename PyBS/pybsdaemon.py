@@ -1,6 +1,5 @@
 import asyncio
 import logging
-from contextlib import suppress
 from sqlalchemy import func, or_
 import os
 import socket
@@ -32,6 +31,7 @@ class PyBSdaemon:
         self._mailer = mailer
         self._hostname = socket.gethostname()
         self._processes = {}
+        self._used_cpus = 0
 
         # start periodic task
         self._task = asyncio.ensure_future(self._main_loop())
@@ -71,7 +71,8 @@ class PyBSdaemon:
                 # start as many jobs as possible
                 while True:
                     # number of available CPUs
-                    available_cpus = self._ncpus - self._get_used_cpus(session)
+                    #available_cpus = self._ncpus - self._get_used_cpus(session)
+                    available_cpus = self._ncpus - self._used_cpus
 
                     # start job if possible
                     if not await self._start_job(session, available_cpus):
@@ -116,6 +117,9 @@ class PyBSdaemon:
         # set Started
         job.started = datetime.datetime.now()
         session.flush()
+
+        # use CPUs
+        self._used_cpus += job.ncpus
 
         # and finally start job
         asyncio.ensure_future(self._run_job(job.id))
@@ -195,6 +199,9 @@ class PyBSdaemon:
 
                 # set finished and PID
                 job.finished = datetime.datetime.now()
+
+                # free CPUs
+                self._used_cpus -= job.ncpus
 
                 # send email?
                 if 'send_mail' in header and 'email' in header and self._mailer is not None:
