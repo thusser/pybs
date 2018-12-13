@@ -11,6 +11,7 @@
     * [Submitting a job](#submitting-a-job)
     * [Deleting a job](#deleting-a-job)
     * [Job list](#job-list)
+    * [Start a waiting job](#start-a-waiting-job)
 
 ## Installation
 
@@ -122,6 +123,7 @@ to create aliases to mimic its behaviour:
     alias qsub='pybs sub'
     alias qdel='pybs del'
     alias qstat='pybs stat'
+    alias qrun='pybs run'
 
 ### Submitting a job
 
@@ -161,3 +163,9 @@ with the ID of the job. If the job is actually running, its process will be term
 A list of waiting and running jobs is shown when calling:
 
     pybs stat
+    
+### Start a waiting job
+ 
+ A waiting job can be started immediately, ignoring all constraints, using:
+ 
+    pybs run <id>
