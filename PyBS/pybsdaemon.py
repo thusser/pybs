@@ -40,27 +40,6 @@ class PyBSdaemon:
         """Close daemon."""
         self._task.cancel()
 
-    def _get_used_cpus(self, session: 'sqlalchemy.orm.session') -> int:
-        """Get number of currently used CPUs.
-
-        Args:
-            session: SQLAlchemy session to use.
-
-        Returns:
-            Number of used CPUs.
-        """
-
-        # get sum of Ncpu for running jobs on this node
-        ncpus = session \
-            .query(func.sum(Job.ncpus)) \
-            .filter(Job.started != None) \
-            .filter(Job.finished == None) \
-            .filter(Job.nodes == self._hostname) \
-            .first()
-
-        # nothing?
-        return 0 if ncpus[0] is None else int(ncpus[0])
-
     async def _main_loop(self):
         """Main loop for daemon that starts new jobs."""
 
@@ -71,7 +50,6 @@ class PyBSdaemon:
                 # start as many jobs as possible
                 while True:
                     # number of available CPUs
-                    #available_cpus = self._ncpus - self._get_used_cpus(session)
                     available_cpus = self._ncpus - self._used_cpus
 
                     # start job if possible
