@@ -94,7 +94,7 @@ class PyBSdaemon:
         query = session.query(Job)
 
         # not started, not finished, not too many requested cores
-        query = query.filter(Job.started == None, Job.finished == None, Job.ncpus <= available_cpus) \
+        query = query.filter(Job.started == None, Job.finished == None, Job.ncpus <= available_cpus)
 
         # if nodes is not NULL, _hostname must be at beginning, between two commas, or at end of nodes
         # this looks simpler, but works on MySQL only:
@@ -117,12 +117,12 @@ class PyBSdaemon:
         session.flush()
 
         # and finally start job
-        asyncio.ensure_future(self.run_job(job.id))
+        asyncio.ensure_future(self._run_job(job.id))
 
         # successfully started a job
         return True
 
-    async def run_job(self, job_id: int):
+    async def _run_job(self, job_id: int):
         """Prepare a job, run it, and analyse output.
 
         Args:
@@ -320,6 +320,34 @@ class PyBSdaemon:
             # kill job
             log.info('Killing running process for job %s...', job_id)
             self._processes[job_id].kill()
+
+        # send success
+        return {'success': True}
+
+    def run(self, job_id: int) -> dict:
+        """Start a waiting job now.
+
+        Args:
+            job_id: ID of job to start.
+
+        Returns:
+            Dictionary with success message.
+        """
+
+        # get job
+        with self._db() as session:
+            # get job
+            job = session.query(Job).filter(Job.id == job_id).first()
+            if job is None:
+                # could not find job in DB
+                ValueError('Job not found.')
+
+            # set started
+            job.started = datetime.datetime.now()
+            session.flush()
+
+            # and finally start job
+            asyncio.ensure_future(self._run_job(job.id))
 
         # send success
         return {'success': True}

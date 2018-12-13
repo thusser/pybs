@@ -23,6 +23,10 @@ def main():
     sp_remove.add_argument('job_id', type=int, help='id of job to delete')
     sp_remove.set_defaults(func=remove)
 
+    sp_run = subparsers.add_parser('run', help='run a job now')
+    sp_run.add_argument('job_id', type=int, help='id of job to run')
+    sp_run.set_defaults(func=run)
+
     # parse
     args = parser.parse_args()
 
@@ -92,6 +96,17 @@ def remove(args):
         client.remove(args.job_id)
     except RpcError as e:
         print('Could not delete job: %s' % str(e))
+
+
+def run(args):
+    # create client
+    client = PyBSclient()
+
+    # remove job
+    try:
+        client.run(args.job_id)
+    except RpcError as e:
+        print('Could not run job: %s' % str(e))
 
 
 if __name__ == '__main__':

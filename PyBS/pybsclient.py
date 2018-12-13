@@ -47,5 +47,15 @@ class PyBSclient:
         """
         return self._rpc_client('remove', job_id=job_id)
 
+    def run(self, job_id: int) -> dict:
+        """Start a waiting job now.
+        Args:
+            job_id: ID of job to start.
+
+        Returns:
+            Dictionary with success message.
+        """
+        return self._rpc_client('run', job_id=job_id)
+
 
 __all__ = ['PyBSclient']
