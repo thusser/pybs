@@ -14,7 +14,17 @@ log = logging.getLogger(__name__)
 
 
 class PyBSdaemon:
-    def __init__(self, database, ncpus=4, root_dir='/', mailer=None):
+    """The PyBS daemon that runs all jobs"""
+
+    def __init__(self, database: 'Database', ncpus: int = 4, root_dir: str = '/', mailer: 'Mailer' = None):
+        """Creates a new PyBS daemon.
+
+        Args:
+            database: Database to use for storing jobs.
+            ncpus: Number of available CPUs on node.
+            root_dir: Root directory for all jobs.
+            mailer: Mailer instance for sending emails.
+        """
         self._task = None
         self._ncpus = ncpus
         self._root_dir = root_dir
@@ -24,12 +34,22 @@ class PyBSdaemon:
         self._processes = {}
 
         # start periodic task
-        self._task = asyncio.ensure_future(self._process_jobs())
+        self._task = asyncio.ensure_future(self._main_loop())
 
     def close(self):
+        """Close daemon."""
         self._task.cancel()
 
-    def _get_used_cpus(self, session):
+    def _get_used_cpus(self, session: 'sqlalchemy.orm.session') -> int:
+        """Get number of currently used CPUs.
+
+        Args:
+            session: SQLAlchemy session to use.
+
+        Returns:
+            Number of used CPUs.
+        """
+
         # get sum of Ncpu for running jobs
         ncpus = session \
             .query(func.sum(Job.ncpus)) \
@@ -40,28 +60,41 @@ class PyBSdaemon:
         # nothing?
         return 0 if ncpus[0] is None else int(ncpus[0])
 
-    async def _process_jobs(self):
+    async def _main_loop(self):
+        """Main loop for daemon that starts new jobs."""
+
+        # Run forever
         while True:
             # open session
             with self._db() as session:
                 # start as many jobs as possible
                 while True:
-                    # number of available cores
-                    available_cores = self._ncpus - self._get_used_cpus(session)
+                    # number of available CPUs
+                    available_cpus = self._ncpus - self._get_used_cpus(session)
 
                     # start job if possible
-                    if not await self._start_job(session, available_cores):
+                    if not await self._start_job(session, available_cpus):
                         break
 
             # sleep a little
             await asyncio.sleep(1)
 
-    async def _start_job(self, session, available_cores):
+    async def _start_job(self, session: 'sqlalchemy.orm.session', available_cpus: int) -> bool:
+        """Try to start a new job.
+
+        Args:
+            session: SQLAlchemy session to use.
+            available_cpus: number of available CPUs.
+
+        Returns:
+            Whether a new job has been started.
+        """
+
         # find job to process and lock row
         query = session.query(Job)
 
         # not started, not finished, not too many requested cores
-        query = query.filter(Job.started == None, Job.finished == None, Job.ncpus <= available_cores) \
+        query = query.filter(Job.started == None, Job.finished == None, Job.ncpus <= available_cpus) \
 
         # if nodes is not NULL, _hostname must be at beginning, between two commas, or at end of nodes
         # this looks simpler, but works on MySQL only:
@@ -89,9 +122,14 @@ class PyBSdaemon:
         # successfully started a job
         return True
 
-    async def run_job(self, job_id):
-        header = {}
+    async def run_job(self, job_id: int):
+        """Prepare a job, run it, and analyse output.
 
+        Args:
+            job_id: ID of job to run.
+        """
+
+        header = {}
         try:
             # get job
             with self._db() as session:
@@ -165,15 +203,19 @@ class PyBSdaemon:
         # log it
         log.info('Finished job %d from %s...', job_id, filename)
 
-    async def stop(self):
-        self._db_pool.close()
-        await self._db_pool.wait_closed()
+    def list(self, started: bool = True, finished: bool = False, sort_asc: bool = False, limit: int = None) -> list:
+        """Get a list of jobs.
 
-        self._task.cancel()
-        with suppress(asyncio.CancelledError):
-            await self._task
+        Args:
+            started: Return only jobs that have (True) or have not (False) started.
+            finished: Return only jobs that have (True) or have not (False) finished.
+            sort_asc: Sort ascending (True) or descending (False).
+            limit: Limit number of returned jobs.
 
-    def list(self, started=True, finished=False, sort_asc=False, limit=None):
+        Returns:
+            List of dictionaries with job infos.
+        """
+
         # get session
         with self._db() as session:
             # do query
@@ -216,7 +258,17 @@ class PyBSdaemon:
                 })
             return data
 
-    def submit(self, filename, user):
+    def submit(self, filename: str, user: str) -> dict:
+        """Submit a new script to the queue.
+
+        Args:
+            filename: Name of file to submit.
+            user: Name of user that submitted job.
+
+        Returns:
+            Dictionary with new job ID.
+        """
+
         # file exists?
         if not os.path.exists(filename):
             raise ValueError('File does not exist.')
@@ -241,7 +293,16 @@ class PyBSdaemon:
         # return ID of new job
         return {'id': jobid}
 
-    def remove(self, job_id: int):
+    def remove(self, job_id: int) -> dict:
+        """Remove an existing job.
+
+        Args:
+            job_id: ID of job to remove.
+
+        Returns:
+            Dictionary with success message.
+        """
+
         # get job
         with self._db() as session:
             # get job
@@ -262,3 +323,6 @@ class PyBSdaemon:
 
         # send success
         return {'success': True}
+
+
+__all__ = ['PyBSdaemon']

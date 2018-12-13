@@ -22,11 +22,29 @@ Last 10 lines of error output (if any):
 
 
 class Mailer:
-    def __init__(self, sender, host):
+    """Sends emails to a given email address."""
+
+    def __init__(self, sender: str, host: str):
+        """Creates a new Mailer.
+
+        Args:
+            sender: Value for FROM field in email.
+            host: SMTP host to send email through.
+        """
         self._sender = sender
         self._host = host
 
-    def send(self, header, job, return_code, outs, errs):
+    def send(self, header: dict, job: 'Job', return_code: int, outs: list, errs: list):
+        """Send the email.
+
+        Args:
+            header: PBS header for job.
+            job: The database entry for the job.
+            return_code: Return code from the script.
+            outs: Output lines from job script.
+            errs: Error lines from job script.
+        """
+
         # no sender or host given?
         if self._sender is None or self._host is None:
             return
@@ -60,3 +78,6 @@ class Mailer:
         except:
             # Could not send email
             log.exception('Could not send email.')
+
+
+__all__ = ['Mailer']
