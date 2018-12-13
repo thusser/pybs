@@ -7,6 +7,6 @@ setup(
     description='PyBS - the Python Batch System',
     author='Tim-Oliver Husser',
     author_email='thusser@uni-goettingen.de',
-    packages=find_packages(include=['pybs', 'pybs.*']),
+    packages=find_packages(include=['PyBS', 'PyBS.*']),
     scripts=['bin/pybs', 'bin/pybsd']
 )
