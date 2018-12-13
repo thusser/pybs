@@ -73,7 +73,7 @@ when calling `pybsd`. A typical configuration looks like this:
 
 ### systemd
 
-In order to start PyBS as a service, create a systemd configuration file /usr/lib/systemd/system/pybs.system:
+In order to start PyBS as a service, create a systemd configuration file /usr/lib/systemd/system/pybs.service:
 
     [Unit]
     Description=GCDB Batch System daemon
