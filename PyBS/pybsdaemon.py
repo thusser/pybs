@@ -50,11 +50,12 @@ class PyBSdaemon:
             Number of used CPUs.
         """
 
-        # get sum of Ncpu for running jobs
+        # get sum of Ncpu for running jobs on this node
         ncpus = session \
             .query(func.sum(Job.ncpus)) \
             .filter(Job.started != None) \
             .filter(Job.finished == None) \
+            .filter(Job.nodes == self._hostname) \
             .first()
 
         # nothing?
