@@ -34,6 +34,11 @@ class PyBSclient:
         Returns:
             Dictionary with new job ID.
         """
+
+        # before submitting it, make it executable
+        os.chmod(filename, 0o774)
+
+        # submit job
         return self._rpc_client('submit', filename=os.path.abspath(filename), user=pwd.getpwuid(os.getuid()).pw_name)
 
     def remove(self, job_id: int) -> dict:
