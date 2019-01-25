@@ -1,13 +1,13 @@
 import asyncio
+import datetime
 import logging
-from sqlalchemy import func, or_
 import os
 import socket
-import datetime
 import subprocess
 
-from .db import Job
+from sqlalchemy import or_
 
+from .db import Job
 
 log = logging.getLogger(__name__)
 
@@ -83,7 +83,7 @@ class PyBSdaemon:
                                  Job.nodes.like('%,' + self._hostname + '%,'), Job.nodes.like('%,' + self._hostname)))
 
         # sort by priority and by oldest first
-        query = query.order_by(Job.priority, Job.submitted.asc())
+        query = query.order_by(Job.priority.desc(), Job.submitted.asc())
 
         # lock row for later update and pick first
         job = query.with_for_update().first()
