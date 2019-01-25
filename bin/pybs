@@ -42,9 +42,9 @@ def stat(args):
     client = PyBSclient()
 
     # list all running, all waiting, and up to 5 finished jobs
-    jobs = client.list(started=True, finished=False, sort_asc=True) + \
-           client.list(started=False, sort_asc=False) + \
-           client.list(finished=True, limit=args.finished)
+    jobs = client.list_running() + \
+           client.list_waiting() + \
+           client.list_finished(limit=args.finished)
 
     # print header
     print('Job ID  Username    nCPUs Prio State Node       Elapsed    %s' % ('Path' if args.path else 'Name',))

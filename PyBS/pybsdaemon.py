@@ -6,6 +6,7 @@ import socket
 import subprocess
 
 from sqlalchemy import or_
+from sqlalchemy.orm import Query
 
 from .db import Job
 
@@ -189,14 +190,8 @@ class PyBSdaemon:
         # log it
         log.info('Finished job %d from %s...', job_id, filename)
 
-    def list(self, started: bool = True, finished: bool = False, sort_asc: bool = False, limit: int = None) -> list:
-        """Get a list of jobs.
-
-        Args:
-            started: Return only jobs that have (True) or have not (False) started.
-            finished: Return only jobs that have (True) or have not (False) finished.
-            sort_asc: Sort ascending (True) or descending (False).
-            limit: Limit number of returned jobs.
+    def list_waiting(self):
+        """Get a list of waiting jobs.
 
         Returns:
             List of dictionaries with job infos.
@@ -205,44 +200,77 @@ class PyBSdaemon:
         # get session
         with self._db() as session:
             # do query
-            jobs = session.query(Job)
+            jobs = session \
+                .query(Job) \
+                .filter(Job.started == None, Job.finished == None) \
+                .order_by(Job.priority.desc(), Job.submitted.asc())
 
-            # which ones?
-            order_column = Job.submitted
-            if started and not finished:    # i.e. running jobs
-                jobs = jobs.filter(Job.started != None, Job.finished == None)
-                order_column = Job.started
-            elif not started:               # i.e. waiting jobs
-                jobs = jobs.filter(Job.started == None)
-            elif finished:
-                jobs = jobs.filter(Job.finished != None)
-                order_column = Job.finished
+            # return list
+            return self._list(jobs)
 
-            # sort
-            if sort_asc:
-                jobs = jobs.order_by(order_column.asc())
-            else:
-                jobs = jobs.order_by(order_column.desc())
+    def list_running(self):
+        """Get a list of running jobs.
 
-            # limit
-            if limit is not None:
-                jobs = jobs.limit(limit)
+        Returns:
+            List of dictionaries with job infos.
+        """
 
-            # extract data
-            data = []
-            for job in jobs:
-                data.append({
-                    'id': job.id,
-                    'name': job.name,
-                    'username': job.username,
-                    'ncpus': job.ncpus,
-                    'priority': job.priority,
-                    'nodes': job.nodes,
-                    'filename': os.path.join(self._root_dir, job.filename),
-                    'started': None if job.started is None else job.started.timestamp(),
-                    'finished': None if job.finished is None else job.finished.timestamp()
-                })
-            return data
+        # get session
+        with self._db() as session:
+            # do query
+            jobs = session \
+                .query(Job) \
+                .filter(Job.started != None, Job.finished == None) \
+                .order_by(Job.started.asc())
+
+            # return list
+            return self._list(jobs)
+
+    def list_finished(self, limit: int = 5):
+        """Get a list of running jobs.
+
+        Args:
+            limit: Maximum number of entries to return.
+
+        Returns:
+            List of dictionaries with job infos.
+        """
+
+        # get session
+        with self._db() as session:
+            # do query
+            jobs = session \
+                .query(Job) \
+                .filter(Job.started != None, Job.finished != None) \
+                .order_by(Job.finished.desc())\
+                .limit(limit)
+
+            # return list
+            return self._list(jobs)
+
+    def _list(self, jobs: Query) -> list:
+        """Get a list of jobs.
+
+        Args:
+            jobs: Query to execute.
+
+        Returns:
+            List of dictionaries with job infos.
+        """
+        data = []
+        for job in jobs:
+            data.append({
+                'id': job.id,
+                'name': job.name,
+                'username': job.username,
+                'ncpus': job.ncpus,
+                'priority': job.priority,
+                'nodes': job.nodes,
+                'filename': os.path.join(self._root_dir, job.filename),
+                'started': None if job.started is None else job.started.timestamp(),
+                'finished': None if job.finished is None else job.finished.timestamp()
+            })
+        return data
 
     def submit(self, filename: str, user: str) -> dict:
         """Submit a new script to the queue.

@@ -1,5 +1,5 @@
-import pwd
 import os
+import pwd
 
 from .rpcclient import RpcClient
 
@@ -11,19 +11,32 @@ class PyBSclient:
         """Creates a new client."""
         self._rpc_client = RpcClient()
 
-    def list(self, started: bool = True, finished: bool = False, sort_asc: bool = False, limit: int = None) -> list:
-        """Get a list of jobs from the daemon.
-
-        Args:
-            started: Return only jobs that have (True) or have not (False) started.
-            finished: Return only jobs that have (True) or have not (False) finished.
-            sort_asc: Sort ascending (True) or descending (False).
-            limit: Limit number of returned jobs.
+    def list_waiting(self):
+        """Get a list of waiting jobs.
 
         Returns:
             List of dictionaries with job infos.
         """
-        return self._rpc_client('list', started=started, finished=finished, sort_asc=sort_asc, limit=limit)
+        return self._rpc_client('list_waiting')
+
+    def list_running(self):
+        """Get a list of running jobs.
+
+        Returns:
+            List of dictionaries with job infos.
+        """
+        return self._rpc_client('list_running')
+
+    def list_finished(self, limit: int = 5):
+        """Get a list of running jobs.
+
+        Args:
+            limit: Maximum number of entries to return.
+
+        Returns:
+            List of dictionaries with job infos.
+        """
+        return self._rpc_client('list_finished', limit=limit)
 
     def submit(self, filename: str) -> dict:
         """Submit a new script to the queue.
