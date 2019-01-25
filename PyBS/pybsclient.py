@@ -57,7 +57,7 @@ class PyBSclient:
         """
 
         # before submitting it, make it executable
-        os.chmod(filename, 0o774)
+        os.chmod(filename, 0o777)
 
         # submit job
         return self._rpc_client('submit', filename=os.path.abspath(filename), user=pwd.getpwuid(os.getuid()).pw_name)
