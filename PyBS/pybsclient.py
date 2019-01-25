@@ -27,6 +27,14 @@ class PyBSclient:
         """
         return self._rpc_client('list_running')
 
+    def list(self):
+        """Get a list of all unfinished jobs, i.e. returns list_waiting+list_running.
+
+        Returns:
+            List of dictionaries with job infos.
+        """
+        return self.list_waiting() + self.list_running()
+
     def list_finished(self, limit: int = 5):
         """Get a list of running jobs.
 
