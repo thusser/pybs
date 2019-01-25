@@ -79,8 +79,8 @@ class PyBSdaemon:
         # if nodes is not NULL, _hostname must be at beginning, between two commas, or at end of nodes
         # this looks simpler, but works on MySQL only:
         #   .filter(or_(Job.nodes == None, func.find_in_set(self._hostname, Job.nodes) > 0))
-        query = query.filter(or_(Job.nodes == None, Job.nodes.like(self._hostname + ',%'),
-                                 Job.nodes.like('%,' + self._hostname + '%,'), Job.nodes.like('%,' + self._hostname)))
+        query = query.filter(or_(Job.nodes == None, Job.nodes == self._hostname, Job.nodes.like(self._hostname + ',%'),
+                                 Job.nodes.like('%,' + self._hostname + ',%'), Job.nodes.like('%,' + self._hostname)))
 
         # sort by priority and by oldest first
         query = query.order_by(Job.priority.desc(), Job.submitted.asc())
