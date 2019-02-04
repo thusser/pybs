@@ -323,7 +323,8 @@ class PyBSdaemon:
             job = session.query(Job).filter(Job.id == job_id).first()
             if job is None:
                 # could not find job in DB
-                ValueError('Job not found.')
+                raise ValueError('Job not found.')
+            ncpus = job.ncpus
 
             # delete it
             log.info('Deleting job %d...', job_id)
@@ -334,6 +335,9 @@ class PyBSdaemon:
             # kill job
             log.info('Killing running process for job %s...', job_id)
             self._processes[job_id].kill()
+
+        # free CPUs
+        self._used_cpus -= ncpus
 
         # send success
         return {'success': True}
