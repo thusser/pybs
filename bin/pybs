@@ -37,19 +37,7 @@ def main():
         parser.print_help()
 
 
-def stat(args):
-    # create client
-    client = PyBSclient()
-
-    # list all running, all waiting, and up to 5 finished jobs
-    jobs = client.list_running() + \
-           client.list_waiting() + \
-           client.list_finished(limit=args.finished)
-
-    # print header
-    print('Job ID  Username    nCPUs Prio State Node       Elapsed    %s' % ('Path' if args.path else 'Name',))
-    print('------  --------    ----- ---- ----- ----       -------    ----')
-
+def _print_jobs(jobs):
     # loop jobs
     for job in jobs:
         # format elapsed time
@@ -65,7 +53,7 @@ def stat(args):
 
         # get values
         job['state'] = 'Done' if job['started'] is not None and job['finished'] is not None else \
-                       'Run' if job['started'] is not None else 'Wait'
+            'Run' if job['started'] is not None else 'Wait'
         job['nodes'] = '--' if job['nodes'] is None else job['nodes']
 
         # name or filename?
@@ -74,6 +62,29 @@ def stat(args):
         # format line
         print('{id:<7d} {username:11s} {ncpus:<5d} {priority:<4d} {state:5s} {nodes:10s} {elapsed:10s} {show_name:s}'
               .format(**job))
+
+
+def stat(args):
+    # print header
+    print('Job ID  Username    nCPUs Prio State Node       Elapsed    %s' % ('Path' if args.path else 'Name',))
+    print('------  --------    ----- ---- ----- ----       -------    ----')
+
+    # create client
+    client = PyBSclient()
+
+    # list all running and all waiting jobs and print them
+    jobs = client.list_running() + client.list_waiting()
+    _print_jobs(jobs)
+
+    # finally, get up to 5 finished jobs and print them
+    if args.finished:
+        print('------  --------    ----- ---- ----- ----       -------    ----')
+        jobs = client.list_finished(limit=args.finished)
+        _print_jobs(jobs)
+
+    # print statistics
+    used_cpus, ncpus = client.get_cpus()
+    print('Used CPUs: %d/%d (%d free)' % (used_cpus, ncpus, ncpus - used_cpus))
 
 
 def submit(args):
