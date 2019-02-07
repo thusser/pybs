@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 import argparse
 import datetime
+import os
 
 from PyBS import PyBSclient, RpcError
 
@@ -57,7 +58,7 @@ def _print_jobs(jobs, path):
         job['nodes'] = '--' if job['nodes'] is None else job['nodes']
 
         # name or filename?
-        job['show_name'] = job['filename'] if path else job['name']
+        job['show_name'] = os.path.dirname(job['filename']) if path else job['name']
 
         # format line
         print('{id:<7d} {username:11s} {ncpus:<5d} {priority:<4d} {state:5s} {nodes:10s} {elapsed:10s} {show_name:s}'
