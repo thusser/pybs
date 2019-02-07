@@ -37,7 +37,7 @@ def main():
         parser.print_help()
 
 
-def _print_jobs(jobs):
+def _print_jobs(jobs, path):
     # loop jobs
     for job in jobs:
         # format elapsed time
@@ -57,7 +57,7 @@ def _print_jobs(jobs):
         job['nodes'] = '--' if job['nodes'] is None else job['nodes']
 
         # name or filename?
-        job['show_name'] = job['filename'] if args.path else job['name']
+        job['show_name'] = job['filename'] if path else job['name']
 
         # format line
         print('{id:<7d} {username:11s} {ncpus:<5d} {priority:<4d} {state:5s} {nodes:10s} {elapsed:10s} {show_name:s}'
@@ -74,13 +74,13 @@ def stat(args):
 
     # list all running and all waiting jobs and print them
     jobs = client.list_running() + client.list_waiting()
-    _print_jobs(jobs)
+    _print_jobs(jobs, args.path)
 
     # finally, get up to 5 finished jobs and print them
     if args.finished:
         print('------  --------    ----- ---- ----- ----       -------    ----')
         jobs = client.list_finished(limit=args.finished)
-        _print_jobs(jobs)
+        _print_jobs(jobs, args.path)
 
     # print statistics
     used_cpus, ncpus = client.get_cpus()
