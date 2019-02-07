@@ -370,5 +370,13 @@ class PyBSdaemon:
         # send success
         return {'success': True}
 
+    def get_cpus(self) -> (int, int):
+        """Returns the currently occupied and the total number of CPUs on this host.
+
+        Returns:
+            Tuple of currently occupied and total number of CPUs.
+        """
+        return (self._used_cpus, self._ncpus)
+
 
 __all__ = ['PyBSdaemon']

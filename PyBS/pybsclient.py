@@ -83,5 +83,13 @@ class PyBSclient:
         """
         return self._rpc_client('run', job_id=job_id)
 
+    def get_cpus(self) -> (int, int):
+        """Returns the currently occupied and the total number of CPUs on this host.
+
+        Returns:
+            Tuple of currently occupied and total number of CPUs.
+        """
+        return self._rpc_client('get_cpus')
+
 
 __all__ = ['PyBSclient']
