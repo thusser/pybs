@@ -50,6 +50,9 @@ class PyBSdaemon:
             with self._db() as session:
                 # start as many jobs as possible
                 while True:
+                    # sleep a little
+                    await asyncio.sleep(1)
+
                     # number of available CPUs
                     available_cpus = self._ncpus - self._used_cpus
 
@@ -58,7 +61,7 @@ class PyBSdaemon:
                         break
 
             # sleep a little
-            await asyncio.sleep(1)
+            await asyncio.sleep(10)
 
     async def _start_job(self, session: 'sqlalchemy.orm.session', available_cpus: int) -> bool:
         """Try to start a new job.
@@ -129,6 +132,9 @@ class PyBSdaemon:
                 # store filename
                 filename = os.path.join(self._root_dir, job.filename)
 
+                # log it
+                log.info('Starting job %d from %s...', job_id, filename)
+
                 # parse PBS header
                 header = Job.parse_pbs_header(filename)
 
@@ -141,9 +147,6 @@ class PyBSdaemon:
 
                 # store it
                 self._processes[job_id] = proc
-
-                # log it
-                log.info('Starting job %d from %s...', job_id, filename)
 
             # wait for process
             outs, errs = await proc.communicate()
