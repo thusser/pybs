@@ -44,6 +44,9 @@ class PyBSdaemon:
     async def _main_loop(self):
         """Main loop for daemon that starts new jobs."""
 
+        # sleep a little, before we start jobs
+        await asyncio.sleep(10)
+
         # Run forever
         while True:
             # catch exceptions
