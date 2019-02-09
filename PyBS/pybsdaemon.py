@@ -108,7 +108,9 @@ class PyBSdaemon:
         self._used_cpus += job.ncpus
 
         # and finally start job
-        asyncio.ensure_future(self._run_job(job.id))
+        job_id = job.id
+        log.info('Preparing job %d...', job_id)
+        asyncio.ensure_future(self._run_job(job_id))
 
         # successfully started a job
         return True
