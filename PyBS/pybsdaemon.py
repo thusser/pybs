@@ -51,67 +51,63 @@ class PyBSdaemon:
         while True:
             # catch exceptions
             try:
-                # open session
-                with self._db() as session:
-                    # start as many jobs as possible
-                    while True:
-                        # sleep a little
-                        await asyncio.sleep(1)
+                # sleep a little
+                await asyncio.sleep(1)
 
-                        # number of available CPUs
-                        available_cpus = self._ncpus - self._used_cpus
+                # number of available CPUs
+                available_cpus = self._ncpus - self._used_cpus
 
-                        # start job if possible
-                        if not await self._start_job(session, available_cpus):
-                            break
+                # start job if possible
+                if not await self._start_job(available_cpus):
+                    # sleep a little longer
+                    await asyncio.sleep(10)
+
             except:
                 log.exception('Something went wrong.')
 
-            # sleep a little
-            await asyncio.sleep(10)
-
-    async def _start_job(self, session: 'sqlalchemy.orm.session', available_cpus: int) -> bool:
+    async def _start_job(self, available_cpus: int) -> bool:
         """Try to start a new job.
 
         Args:
-            session: SQLAlchemy session to use.
             available_cpus: number of available CPUs.
 
         Returns:
             Whether a new job has been started.
         """
 
-        # find job to process and lock row
-        query = session.query(Job)
+        # open session
+        with self._db() as session:
+            # find job to process and lock row
+            query = session.query(Job)
 
-        # not started, not finished, not too many requested cores
-        query = query.filter(Job.started == None, Job.finished == None, Job.ncpus <= available_cpus)
+            # not started, not finished, not too many requested cores
+            query = query.filter(Job.started == None, Job.finished == None, Job.ncpus <= available_cpus)
 
-        # if nodes is not NULL, _hostname must be at beginning, between two commas, or at end of nodes
-        # this looks simpler, but works on MySQL only:
-        #   .filter(or_(Job.nodes == None, func.find_in_set(self._hostname, Job.nodes) > 0))
-        query = query.filter(or_(Job.nodes == None, Job.nodes == self._hostname, Job.nodes.like(self._hostname + ',%'),
-                                 Job.nodes.like('%,' + self._hostname + ',%'), Job.nodes.like('%,' + self._hostname)))
+            # if nodes is not NULL, _hostname must be at beginning, between two commas, or at end of nodes
+            # this looks simpler, but works on MySQL only:
+            #   .filter(or_(Job.nodes == None, func.find_in_set(self._hostname, Job.nodes) > 0))
+            query = query.filter(or_(Job.nodes == None, Job.nodes == self._hostname, Job.nodes.like(self._hostname + ',%'),
+                                     Job.nodes.like('%,' + self._hostname + ',%'), Job.nodes.like('%,' + self._hostname)))
 
-        # sort by priority and by oldest first
-        query = query.order_by(Job.priority.desc(), Job.submitted.asc())
+            # sort by priority and by oldest first
+            query = query.order_by(Job.priority.desc(), Job.submitted.asc())
 
-        # lock row for later update and pick first
-        job = query.with_for_update().first()
+            # lock row for later update and pick first
+            job = query.with_for_update().first()
 
-        # none available?
-        if job is None:
-            return False
+            # none available?
+            if job is None:
+                return False
 
-        # set Started
-        job.started = datetime.datetime.now()
-        session.flush()
+            # set Started and remember job id
+            job.started = datetime.datetime.now()
+            session.flush()
+            job_id = job.id
 
         # use CPUs
         self._used_cpus += job.ncpus
 
         # and finally start job
-        job_id = job.id
         log.info('Preparing job %d...', job_id)
         asyncio.ensure_future(self._run_job(job_id))
 
