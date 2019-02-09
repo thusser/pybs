@@ -99,13 +99,13 @@ class PyBSdaemon:
             if job is None:
                 return False
 
+            # use CPUs
+            self._used_cpus += job.ncpus
+
             # set Started and remember job id
             job.started = datetime.datetime.now()
             session.flush()
             job_id = job.id
-
-        # use CPUs
-        self._used_cpus += job.ncpus
 
         # and finally start job
         log.info('Preparing job %d...', job_id)
