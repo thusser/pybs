@@ -46,19 +46,23 @@ class PyBSdaemon:
 
         # Run forever
         while True:
-            # open session
-            with self._db() as session:
-                # start as many jobs as possible
-                while True:
-                    # sleep a little
-                    await asyncio.sleep(1)
+            # catch exceptions
+            try:
+                # open session
+                with self._db() as session:
+                    # start as many jobs as possible
+                    while True:
+                        # sleep a little
+                        await asyncio.sleep(1)
 
-                    # number of available CPUs
-                    available_cpus = self._ncpus - self._used_cpus
+                        # number of available CPUs
+                        available_cpus = self._ncpus - self._used_cpus
 
-                    # start job if possible
-                    if not await self._start_job(session, available_cpus):
-                        break
+                        # start job if possible
+                        if not await self._start_job(session, available_cpus):
+                            break
+            except:
+                log.exception('Something went wrong.')
 
             # sleep a little
             await asyncio.sleep(10)
