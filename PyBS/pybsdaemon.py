@@ -136,21 +136,21 @@ class PyBSdaemon:
                 # store filename
                 filename = os.path.join(self._root_dir, job.filename)
 
-                # log it
-                log.info('Starting job %d from %s...', job_id, filename)
+            # log it
+            log.info('Starting job %d from %s...', job_id, filename)
 
-                # parse PBS header
-                header = Job.parse_pbs_header(filename)
+            # parse PBS header
+            header = Job.parse_pbs_header(filename)
 
-                # get working directory
-                cwd = os.path.dirname(filename)
+            # get working directory
+            cwd = os.path.dirname(filename)
 
-                # run job
-                proc = await asyncio.create_subprocess_shell(filename, cwd=cwd,
-                                                             stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+            # run job
+            proc = await asyncio.create_subprocess_shell(filename, cwd=cwd,
+                                                         stdout=subprocess.PIPE, stderr=subprocess.PIPE)
 
-                # store it
-                self._processes[job_id] = proc
+            # store it
+            self._processes[job_id] = proc
 
             # wait for process
             outs, errs = await proc.communicate()
