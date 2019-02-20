@@ -74,8 +74,10 @@ def stat(args):
     client = PyBSclient()
 
     # list all running and all waiting jobs and print them
-    jobs = client.list_running() + client.list_waiting()
-    _print_jobs(jobs, args.path)
+    running = client.list_running()
+    waiting = client.list_waiting()
+    _print_jobs(running, args.path)
+    _print_jobs(waiting, args.path)
 
     # finally, get up to 5 finished jobs and print them
     if args.finished:
@@ -85,7 +87,8 @@ def stat(args):
 
     # print statistics
     used_cpus, ncpus = client.get_cpus()
-    print('Used CPUs: %d/%d (%d free)' % (used_cpus, ncpus, ncpus - used_cpus))
+    print('Running: %d, Waiting: %d, Used CPUs on this host: %d/%d (%d free)' % (len(running), len(waiting),
+                                                                                 used_cpus, ncpus, ncpus - used_cpus))
 
 
 def submit(args):
