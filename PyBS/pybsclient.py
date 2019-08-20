@@ -1,5 +1,6 @@
 import os
 import pwd
+import stat
 
 from .rpcclient import RpcClient
 
@@ -57,10 +58,15 @@ class PyBSclient:
         """
 
         # before submitting it, make it executable
-        os.chmod(filename, 0o774)
+        #os.chmod(filename, 0o774)
 
-        # submit job
-        return self._rpc_client('submit', filename=os.path.abspath(filename), user=pwd.getpwuid(os.getuid()).pw_name)
+        # check that file is executable
+        if stat.S_IXGRP & os.stat(filename)[stat.ST_MODE] and stat.S_IXUSR & os.stat(filename)[stat.ST_MODE]:
+            # submit job
+            return self._rpc_client('submit', filename=os.path.abspath(filename),
+                                    user=pwd.getpwuid(os.getuid()).pw_name)
+        else:
+            raise OSError('File %s not executable.' % os.path.abspath(filename))
 
     def remove(self, job_id: int) -> dict:
         """Remove an existing job.
