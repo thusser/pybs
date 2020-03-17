@@ -388,5 +388,35 @@ class PyBSdaemon:
         """
         return (self._used_cpus, self._ncpus)
 
+    def config(self) -> dict:
+        """Returns current configuration.
+
+        Returns:
+            Dictionary with current configuration.
+        """
+        return {
+            'ncpus': self._ncpus
+        }
+
+    def setconfig(self, key: str, value: str) -> dict:
+        """Set a configuration option.
+
+        Args:
+            key: Name of parameter to set.
+            value: New value.
+
+        Returns:
+            Dictionary with success message.
+        """
+
+        # check key
+        if key == 'ncpus':
+            self._ncpus = int(value)
+        else:
+            raise ValueError('Unknown parameter %s' % key)
+
+        # send success
+        return {'success': True}
+
 
 __all__ = ['PyBSdaemon']

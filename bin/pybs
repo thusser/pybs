@@ -11,22 +11,36 @@ def main():
     parser = argparse.ArgumentParser(description='PyBS CLI')
     subparsers = parser.add_subparsers(dest='method')
 
+    # statistics
     sp_stat = subparsers.add_parser('stat', help='job stats')
     sp_stat.add_argument('-n', '--finished', type=int, help='number of finished jobs to show', default=5)
     sp_stat.add_argument('-p', '--path', action='store_true', help='show filename of script instead of job name')
     sp_stat.set_defaults(func=stat)
 
+    # submit a job
     sp_submit = subparsers.add_parser('sub', help='submit a job')
     sp_submit.add_argument('filename', type=str, help='filename of script to run')
     sp_submit.set_defaults(func=submit)
 
+    # delete a job
     sp_remove = subparsers.add_parser('del', help='delete a job')
     sp_remove.add_argument('job_id', type=int, help='id of job to delete')
     sp_remove.set_defaults(func=remove)
 
+    # run a job now
     sp_run = subparsers.add_parser('run', help='run a job now')
     sp_run.add_argument('job_id', type=int, help='id of job to run')
     sp_run.set_defaults(func=run)
+
+    # get config
+    sp_config = subparsers.add_parser('config', help='get current config')
+    sp_config.set_defaults(func=config)
+
+    # get config
+    sp_set = subparsers.add_parser('set', help='set config parameter')
+    sp_set.add_argument('key', type=str, help='name of parameter to set')
+    sp_set.add_argument('value', type=str, help='new value')
+    sp_set.set_defaults(func=setconfig)
 
     # parse
     args = parser.parse_args()
@@ -122,6 +136,35 @@ def run(args):
         client.run(args.job_id)
     except RpcError as e:
         print('Could not run job: %s' % str(e))
+
+
+def config(args):
+    # create client
+    client = PyBSclient()
+
+    try:
+        # get config
+        cfg = client.config()
+
+        # print it
+        print('Current configuration:')
+        for k, v in cfg.items():
+            print('  - %10s = %s' % (k, v))
+
+    except RpcError as e:
+        print('Could not fetch config: %s' % str(e))
+
+
+def setconfig(args):
+    # create client
+    client = PyBSclient()
+
+    try:
+        # set config
+        client.setconfig(key=args.key, value=args.value)
+
+    except RpcError as e:
+        print('Could not set parameter: %s' % str(e))
 
 
 if __name__ == '__main__':
