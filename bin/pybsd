@@ -52,6 +52,7 @@ def main():
             database=database,
             mailer=mailer,
             ncpus=int(config.get('ncpus', 4)),
+            nodename=config.get('nodename', None),
             root_dir=config.get('root', '/')
         )
 
