@@ -1,5 +1,6 @@
-import pwd
 import os
+import pwd
+import stat
 
 from .rpcclient import RpcClient
 
@@ -11,19 +12,40 @@ class PyBSclient:
         """Creates a new client."""
         self._rpc_client = RpcClient()
 
-    def list(self, started: bool = True, finished: bool = False, sort_asc: bool = False, limit: int = None) -> list:
-        """Get a list of jobs from the daemon.
-
-        Args:
-            started: Return only jobs that have (True) or have not (False) started.
-            finished: Return only jobs that have (True) or have not (False) finished.
-            sort_asc: Sort ascending (True) or descending (False).
-            limit: Limit number of returned jobs.
+    def list_waiting(self):
+        """Get a list of waiting jobs.
 
         Returns:
             List of dictionaries with job infos.
         """
-        return self._rpc_client('list', started=started, finished=finished, sort_asc=sort_asc, limit=limit)
+        return self._rpc_client('list_waiting')
+
+    def list_running(self):
+        """Get a list of running jobs.
+
+        Returns:
+            List of dictionaries with job infos.
+        """
+        return self._rpc_client('list_running')
+
+    def list(self):
+        """Get a list of all unfinished jobs, i.e. returns list_waiting+list_running.
+
+        Returns:
+            List of dictionaries with job infos.
+        """
+        return self.list_waiting() + self.list_running()
+
+    def list_finished(self, limit: int = 5):
+        """Get a list of running jobs.
+
+        Args:
+            limit: Maximum number of entries to return.
+
+        Returns:
+            List of dictionaries with job infos.
+        """
+        return self._rpc_client('list_finished', limit=limit)
 
     def submit(self, filename: str) -> dict:
         """Submit a new script to the queue.
@@ -34,7 +56,17 @@ class PyBSclient:
         Returns:
             Dictionary with new job ID.
         """
-        return self._rpc_client('submit', filename=os.path.abspath(filename), user=pwd.getpwuid(os.getuid()).pw_name)
+
+        # before submitting it, make it executable
+        #os.chmod(filename, 0o774)
+
+        # check that file is executable
+        if stat.S_IXGRP & os.stat(filename)[stat.ST_MODE] and stat.S_IXUSR & os.stat(filename)[stat.ST_MODE]:
+            # submit job
+            return self._rpc_client('submit', filename=os.path.abspath(filename),
+                                    user=pwd.getpwuid(os.getuid()).pw_name)
+        else:
+            raise OSError('File %s not executable.' % os.path.abspath(filename))
 
     def remove(self, job_id: int) -> dict:
         """Remove an existing job.
@@ -46,6 +78,44 @@ class PyBSclient:
             Dictionary with success message.
         """
         return self._rpc_client('remove', job_id=job_id)
+
+    def run(self, job_id: int) -> dict:
+        """Start a waiting job now.
+        Args:
+            job_id: ID of job to start.
+
+        Returns:
+            Dictionary with success message.
+        """
+        return self._rpc_client('run', job_id=job_id)
+
+    def get_cpus(self) -> (int, int):
+        """Returns the currently occupied and the total number of CPUs on this host.
+
+        Returns:
+            Tuple of currently occupied and total number of CPUs.
+        """
+        return self._rpc_client('get_cpus')
+
+    def config(self) -> dict:
+        """Returns current configuration.
+
+        Returns:
+            Dictionary with current configuration.
+        """
+        return self._rpc_client('config')
+
+    def setconfig(self, key: str, value: str) -> dict:
+        """Set a configuration option.
+
+        Args:
+            key: Name of parameter to set.
+            value: New value.
+
+        Returns:
+            Dictionary with success message.
+        """
+        return self._rpc_client('setconfig', key=key, value=value)
 
 
 __all__ = ['PyBSclient']

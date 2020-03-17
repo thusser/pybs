@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 import argparse
 import datetime
+import os
 
 from PyBS import PyBSclient, RpcError
 
@@ -10,18 +11,36 @@ def main():
     parser = argparse.ArgumentParser(description='PyBS CLI')
     subparsers = parser.add_subparsers(dest='method')
 
+    # statistics
     sp_stat = subparsers.add_parser('stat', help='job stats')
     sp_stat.add_argument('-n', '--finished', type=int, help='number of finished jobs to show', default=5)
     sp_stat.add_argument('-p', '--path', action='store_true', help='show filename of script instead of job name')
     sp_stat.set_defaults(func=stat)
 
+    # submit a job
     sp_submit = subparsers.add_parser('sub', help='submit a job')
     sp_submit.add_argument('filename', type=str, help='filename of script to run')
     sp_submit.set_defaults(func=submit)
 
+    # delete a job
     sp_remove = subparsers.add_parser('del', help='delete a job')
     sp_remove.add_argument('job_id', type=int, help='id of job to delete')
     sp_remove.set_defaults(func=remove)
+
+    # run a job now
+    sp_run = subparsers.add_parser('run', help='run a job now')
+    sp_run.add_argument('job_id', type=int, help='id of job to run')
+    sp_run.set_defaults(func=run)
+
+    # get config
+    sp_config = subparsers.add_parser('config', help='get current config')
+    sp_config.set_defaults(func=config)
+
+    # get config
+    sp_set = subparsers.add_parser('set', help='set config parameter')
+    sp_set.add_argument('key', type=str, help='name of parameter to set')
+    sp_set.add_argument('value', type=str, help='new value')
+    sp_set.set_defaults(func=setconfig)
 
     # parse
     args = parser.parse_args()
@@ -33,19 +52,7 @@ def main():
         parser.print_help()
 
 
-def stat(args):
-    # create client
-    client = PyBSclient()
-
-    # list all running, all waiting, and up to 5 finished jobs
-    jobs = client.list(started=True, finished=False) + \
-           client.list(started=False) + \
-           client.list(finished=True, limit=args.finished)
-
-    # print header
-    print('Job ID  Username    nCPUs Prio State Node       Elapsed    %s' % ('Path' if args.path else 'Name',))
-    print('------  --------    ----- ---- ----- ----       -------    ----')
-
+def _print_jobs(jobs, path):
     # loop jobs
     for job in jobs:
         # format elapsed time
@@ -61,15 +68,41 @@ def stat(args):
 
         # get values
         job['state'] = 'Done' if job['started'] is not None and job['finished'] is not None else \
-                       'Run' if job['started'] is not None else 'Wait'
+            'Run' if job['started'] is not None else 'Wait'
         job['nodes'] = '--' if job['nodes'] is None else job['nodes']
 
         # name or filename?
-        job['show_name'] = job['filename'] if args.path else job['name']
+        job['show_name'] = os.path.dirname(job['filename']) if path else job['name']
 
         # format line
         print('{id:<7d} {username:11s} {ncpus:<5d} {priority:<4d} {state:5s} {nodes:10s} {elapsed:10s} {show_name:s}'
               .format(**job))
+
+
+def stat(args):
+    # print header
+    print('Job ID  Username    nCPUs Prio State Node       Elapsed    %s' % ('Path' if args.path else 'Name',))
+    print('------  --------    ----- ---- ----- ----       -------    ----')
+
+    # create client
+    client = PyBSclient()
+
+    # list all running and all waiting jobs and print them
+    running = client.list_running()
+    waiting = client.list_waiting()
+    _print_jobs(running, args.path)
+    _print_jobs(waiting, args.path)
+
+    # finally, get up to 5 finished jobs and print them
+    if args.finished:
+        print('------  --------    ----- ---- ----- ----       -------    ----')
+        jobs = client.list_finished(limit=args.finished)
+        _print_jobs(jobs, args.path)
+
+    # print statistics
+    used_cpus, ncpus = client.get_cpus()
+    print('Running: %d, Waiting: %d, Used CPUs on this host: %d/%d (%d free)' % (len(running), len(waiting),
+                                                                                 used_cpus, ncpus, ncpus - used_cpus))
 
 
 def submit(args):
@@ -92,6 +125,46 @@ def remove(args):
         client.remove(args.job_id)
     except RpcError as e:
         print('Could not delete job: %s' % str(e))
+
+
+def run(args):
+    # create client
+    client = PyBSclient()
+
+    # remove job
+    try:
+        client.run(args.job_id)
+    except RpcError as e:
+        print('Could not run job: %s' % str(e))
+
+
+def config(args):
+    # create client
+    client = PyBSclient()
+
+    try:
+        # get config
+        cfg = client.config()
+
+        # print it
+        print('Current configuration:')
+        for k, v in cfg.items():
+            print('  - %10s = %s' % (k, v))
+
+    except RpcError as e:
+        print('Could not fetch config: %s' % str(e))
+
+
+def setconfig(args):
+    # create client
+    client = PyBSclient()
+
+    try:
+        # set config
+        client.setconfig(key=args.key, value=args.value)
+
+    except RpcError as e:
+        print('Could not set parameter: %s' % str(e))
 
 
 if __name__ == '__main__':

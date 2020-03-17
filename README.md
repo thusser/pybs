@@ -11,6 +11,7 @@
     * [Submitting a job](#submitting-a-job)
     * [Deleting a job](#deleting-a-job)
     * [Job list](#job-list)
+    * [Start a waiting job](#start-a-waiting-job)
 
 ## Installation
 
@@ -73,7 +74,7 @@ when calling `pybsd`. A typical configuration looks like this:
 
 ### systemd
 
-In order to start PyBS as a service, create a systemd configuration file /usr/lib/systemd/system/pybs.system:
+In order to start PyBS as a service, create a systemd configuration file /usr/lib/systemd/system/pybs.service:
 
     [Unit]
     Description=GCDB Batch System daemon
@@ -93,6 +94,22 @@ In order to start PyBS as a service, create a systemd configuration file /usr/li
 
 Now you can start/stop *PyBS* via `service pybs start/stop`.
 
+If you need to set up a special environment (e.g. like [pyenv](https://github.com/pyenv/pyenv)), you can
+create a separate script somewhere (e.g. /usr/local/bin/start_pybs.sh) with content like this:
+
+    #!/bin/bash
+    
+    # set up pyenv
+    export PYENV_ROOT="/opt/pyenv"
+    export PATH="$PYENV_ROOT/bin:$PATH"
+    eval "$(pyenv init -)"
+    pyenv global 3.5.2
+    
+    # start pybsd
+    /opt/pyenv/shims/pybsd
+    
+Now change the ExecStart setting in pybs.service to this script and everything should work fine.
+
 ## Usage
 
 After the *PyBS* daemon *pybsd* has been started, the command line interface `pybs` can be used for accessing 
@@ -106,6 +123,7 @@ to create aliases to mimic its behaviour:
     alias qsub='pybs sub'
     alias qdel='pybs del'
     alias qstat='pybs stat'
+    alias qrun='pybs run'
 
 ### Submitting a job
 
@@ -145,3 +163,9 @@ with the ID of the job. If the job is actually running, its process will be term
 A list of waiting and running jobs is shown when calling:
 
     pybs stat
+    
+### Start a waiting job
+ 
+ A waiting job can be started immediately, ignoring all constraints, using:
+ 
+    pybs run <id>
