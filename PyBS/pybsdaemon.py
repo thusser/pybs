@@ -16,11 +16,13 @@ log = logging.getLogger(__name__)
 class PyBSdaemon:
     """The PyBS daemon that runs all jobs"""
 
-    def __init__(self, database: 'Database', ncpus: int = 4, root_dir: str = '/', mailer: 'Mailer' = None):
+    def __init__(self, database: 'Database', nodename: str = None, ncpus: int = 4, root_dir: str = '/',
+                 mailer: 'Mailer' = None):
         """Creates a new PyBS daemon.
 
         Args:
             database: Database to use for storing jobs.
+            nodename: Name for node. If None, current hostname is used.
             ncpus: Number of available CPUs on node.
             root_dir: Root directory for all jobs.
             mailer: Mailer instance for sending emails.
@@ -30,7 +32,7 @@ class PyBSdaemon:
         self._root_dir = root_dir
         self._db = database
         self._mailer = mailer
-        self._hostname = socket.gethostname()
+        self._hostname = socket.gethostname() if nodename is None else nodename
         self._processes = {}
         self._used_cpus = 0
 
