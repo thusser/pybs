@@ -348,8 +348,8 @@ class PyBSdaemon:
             log.info('Killing running process for job %s...', job_id)
             self._processes[job_id].kill()
 
-        # free CPUs
-        self._used_cpus -= ncpus
+            # free CPUs
+            self._used_cpus -= ncpus
 
         # send success
         return {'success': True}

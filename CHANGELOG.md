@@ -6,3 +6,8 @@
 - Added new commands "config" and "set" to fetch and set config parameters
 - Tweaked statistics
 - Fixed bug with freeing CPUs after removing job
+
+
+## version 0.2.1
+- Added "nodename" option for configuration file
+- Don't "free" CPUs on deleting jobs, if job is not actually running
