@@ -47,5 +47,25 @@ class PyBSclient:
         """
         return self._rpc_client('remove', job_id=job_id)
 
+    def config(self) -> dict:
+        """Returns current configuration.
+
+        Returns:
+            Dictionary with current configuration.
+        """
+        return self._rpc_client('config')
+
+    def setconfig(self, key: str, value: str) -> dict:
+        """Set a configuration option.
+
+        Args:
+            key: Name of parameter to set.
+            value: New value.
+
+        Returns:
+            Dictionary with success message.
+        """
+        return self._rpc_client('setconfig', key=key, value=value)
+
 
 __all__ = ['PyBSclient']
