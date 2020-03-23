@@ -102,9 +102,11 @@ class Job(Base):
 
         # we need at least a job name and number of cpus
         if 'name' not in header:
-            raise ValueError('No job name given in PBS header.')
+            # default to filename as job name
+            header['name'] = filename
         if 'ncpus' not in header:
-            raise ValueError('No ncpus given in PBS header.')
+            # default to one CPU
+            header['ncpus'] = 1
 
         # fill rest
         job.name = header['name']
