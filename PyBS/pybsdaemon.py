@@ -5,7 +5,7 @@ import os
 import socket
 import subprocess
 
-from sqlalchemy import or_
+from sqlalchemy import or_, func
 from sqlalchemy.orm import Query
 
 from .db import Job
@@ -34,7 +34,6 @@ class PyBSdaemon:
         self._mailer = mailer
         self._hostname = socket.gethostname() if nodename is None else nodename
         self._processes = {}
-        self._used_cpus = 0
 
         # start periodic task
         self._task = asyncio.ensure_future(self._main_loop())
@@ -57,7 +56,7 @@ class PyBSdaemon:
                 await asyncio.sleep(1)
 
                 # number of available CPUs
-                available_cpus = self._ncpus - self._used_cpus
+                available_cpus = self._ncpus - self.used_cpus()
 
                 # start job if possible
                 if not await self._start_job(available_cpus):
@@ -66,6 +65,16 @@ class PyBSdaemon:
 
             except:
                 log.exception('Something went wrong.')
+
+    def used_cpus(self):
+        """Get number of used CPUs."""
+        with self._db() as session:
+            # sum CPUs of jobs running on this node
+            result = session.query(func.sum(Job.ncpus).label('used_cpus'))\
+                .filter(Job.started != None, Job.finished == None, Job.nodes == self._hostname)\
+                .first()
+            # if result is None, no Job was running, so return 0
+            return 0 if result.used_cpus is None else result.used_cpus
 
     async def _start_job(self, available_cpus: int) -> bool:
         """Try to start a new job.
@@ -103,11 +112,9 @@ class PyBSdaemon:
             if job is None:
                 return False
 
-            # use CPUs
-            self._used_cpus += job.ncpus
-
-            # set Started and remember job id
+            # set Started/Hostname and remember job id
             job.started = datetime.datetime.now()
+            job.nodes = self._hostname
             session.flush()
             job_id = job.id
 
@@ -133,10 +140,8 @@ class PyBSdaemon:
                 job = session.query(Job).filter(Job.id == job_id).first()
                 if job is None:
                     # could not find job in DB
+                    log.error('Could not find job %d in database.', job_id)
                     return
-
-                # set hostname
-                job.nodes = self._hostname
 
                 # store filename
                 filename = os.path.join(self._root_dir, job.filename)
@@ -190,9 +195,6 @@ class PyBSdaemon:
 
                 # set finished and PID
                 job.finished = datetime.datetime.now()
-
-                # free CPUs
-                self._used_cpus -= job.ncpus
 
                 # send email?
                 if 'send_mail' in header and 'email' in header and self._mailer is not None:
@@ -348,9 +350,6 @@ class PyBSdaemon:
             log.info('Killing running process for job %s...', job_id)
             self._processes[job_id].kill()
 
-            # free CPUs
-            self._used_cpus -= ncpus
-
         # send success
         return {'success': True}
 
@@ -388,7 +387,7 @@ class PyBSdaemon:
         Returns:
             Tuple of currently occupied and total number of CPUs.
         """
-        return (self._used_cpus, self._ncpus)
+        return self.used_cpus(), self._ncpus
 
     def config(self) -> dict:
         """Returns current configuration.
