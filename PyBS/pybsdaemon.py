@@ -34,6 +34,7 @@ class PyBSdaemon:
         self._mailer = mailer
         self._hostname = socket.gethostname() if nodename is None else nodename
         self._processes = {}
+        self._used_cpus = 0
 
         # start periodic task
         self._task = asyncio.ensure_future(self._main_loop())
@@ -55,8 +56,11 @@ class PyBSdaemon:
                 # sleep a little
                 await asyncio.sleep(1)
 
+                # update used cpus
+                self._used_cpus = self._get_used_cpus()
+
                 # number of available CPUs
-                available_cpus = self._ncpus - self.used_cpus()
+                available_cpus = self._ncpus - self._used_cpus
 
                 # start job if possible
                 if not await self._start_job(available_cpus):
@@ -66,13 +70,14 @@ class PyBSdaemon:
             except:
                 log.exception('Something went wrong.')
 
-    def used_cpus(self):
+    def _get_used_cpus(self):
         """Get number of used CPUs."""
         with self._db() as session:
             # sum CPUs of jobs running on this node
             result = session.query(func.sum(Job.ncpus).label('used_cpus'))\
                 .filter(Job.started != None, Job.finished == None, Job.nodes == self._hostname)\
                 .first()
+
             # if result is None, no Job was running, so return 0
             return 0 if result.used_cpus is None else result.used_cpus
 
@@ -387,7 +392,7 @@ class PyBSdaemon:
         Returns:
             Tuple of currently occupied and total number of CPUs.
         """
-        return self.used_cpus(), self._ncpus
+        return self._used_cpus, self._ncpus
 
     def config(self) -> dict:
         """Returns current configuration.
