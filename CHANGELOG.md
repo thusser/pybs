@@ -1,5 +1,8 @@
 # Changelog
 
+## version 0.2.4
+- Fixed bug with number of used CPUs *sigh*
+
 ## version 0.2.3
 - Fixed bug with number of used CPUs
 

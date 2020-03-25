@@ -79,7 +79,7 @@ class PyBSdaemon:
                 .first()
 
             # if result is None, no Job was running, so return 0
-            return 0 if result.used_cpus is None else result.used_cpus
+            return 0 if result.used_cpus is None else int(result.used_cpus)
 
     async def _start_job(self, available_cpus: int) -> bool:
         """Try to start a new job.
