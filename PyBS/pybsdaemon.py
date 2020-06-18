@@ -221,7 +221,7 @@ class PyBSdaemon:
                 job.finished = datetime.datetime.now()
 
                 # send email?
-                if 'send_mail' in header and 'email' in header and self._mailer is not None:
+                if 'send_mail' in header:
                     # really send?
                     self._send_message(header, job, return_code, outs, errs)
 

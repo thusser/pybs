@@ -59,7 +59,7 @@ class Slack:
         """
         self._token = token
 
-    def send(self, to: str, subject: str, body: str):
+    def send(self, to: str, body: str):
         """Send the email.
 
         Args:
