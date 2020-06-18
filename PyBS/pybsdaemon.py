@@ -471,9 +471,11 @@ class PyBSdaemon:
 
         # send email?
         if 'email' in header:
+            log.info('Sending email to %s...', header['email'])
             subject = 'PyBS JOB {0} {1} {2}'.format(job.id, job.name, 'finished' if return_code == 0 else 'failed')
             self._mailer.send(to=header['email'], subject=subject, body=body)
         elif 'slack' in header:
+            log.info('Sending Slack message to #%s...', header['slack'])
             self._slack.send(to=header['slack'], body=body)
 
 
