@@ -1,6 +1,6 @@
 # Changelog
 
-## version
+## version 0.3
 - Added Slack support, needs 'slack-token' in config and a -S switch in the header with the channel name
 
 ## version 0.2.4
