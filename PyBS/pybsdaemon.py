@@ -13,11 +13,28 @@ from .db import Job
 log = logging.getLogger(__name__)
 
 
+MAIL_BODY = """PBS Job Id: {0}
+Job Name:   {1}
+
+Submitted:  {2}
+Started:    {3}
+Finished:   {4}
+
+Filename:   {5}
+Exit code:  {6}
+
+Last 10 lines of standard output (if any):
+{7}
+
+Last 10 lines of error output (if any):
+{8}"""
+
+
 class PyBSdaemon:
     """The PyBS daemon that runs all jobs"""
 
     def __init__(self, database: 'Database', nodename: str = None, ncpus: int = 4, root_dir: str = '/',
-                 mailer: 'Mailer' = None):
+                 mailer: 'Mailer' = None, slack: 'Slack' = None):
         """Creates a new PyBS daemon.
 
         Args:
@@ -26,12 +43,14 @@ class PyBSdaemon:
             ncpus: Number of available CPUs on node.
             root_dir: Root directory for all jobs.
             mailer: Mailer instance for sending emails.
+            slack: Slack instance for sending messages.
         """
         self._task = None
         self._ncpus = ncpus
         self._root_dir = root_dir
         self._db = database
         self._mailer = mailer
+        self._slack = slack
         self._hostname = socket.gethostname() if nodename is None else nodename
         self._processes = {}
         self._used_cpus = 0
@@ -79,7 +98,7 @@ class PyBSdaemon:
                 .first()
 
             # if result is None, no Job was running, so return 0
-            return 0 if result.used_cpus is None else result.used_cpus
+            return 0 if result.used_cpus is None else int(result.used_cpus)
 
     async def _start_job(self, available_cpus: int) -> bool:
         """Try to start a new job.
@@ -202,9 +221,9 @@ class PyBSdaemon:
                 job.finished = datetime.datetime.now()
 
                 # send email?
-                if 'send_mail' in header and 'email' in header and self._mailer is not None:
+                if 'send_mail' in header:
                     # really send?
-                    self._mailer.send(header, job, return_code, outs, errs)
+                    self._send_message(header, job, return_code, outs, errs)
 
         # log it
         log.info('Finished job %d from %s...', job_id, filename)
@@ -423,6 +442,41 @@ class PyBSdaemon:
 
         # send success
         return {'success': True}
+
+    def _send_message(self, header: dict, job: 'Job', return_code: int, outs: list, errs: list):
+        """Send message to wherever is requested.
+
+        Args:
+            header: PBS header for job.
+            job: The database entry for the job.
+            return_code: Return code from the script.
+            outs: Output lines from job script.
+            errs: Error lines from job script.
+        """
+
+        # was a message requested for this return code?
+        mode = header['send_mail']
+        if ('e' not in mode and return_code == 0) or ('a' not in mode and return_code != 0):
+            return
+
+        # out and err
+        out, err = None, None
+        if outs is not None and errs is not None:
+            out = '\n'.join(outs.decode('utf-8').split('\n')[-10:])
+            err = '\n'.join(errs.decode('utf-8').split('\n')[-10:])
+
+        # compile body
+        body = MAIL_BODY.format(job.id, job.name, job.submitted, job.started, job.finished, job.filename,
+                                return_code, out, err)
+
+        # send email?
+        if 'email' in header:
+            log.info('Sending email to %s...', header['email'])
+            subject = 'PyBS JOB {0} {1} {2}'.format(job.id, job.name, 'finished' if return_code == 0 else 'failed')
+            self._mailer.send(to=header['email'], subject=subject, body=body)
+        elif 'slack' in header:
+            log.info('Sending Slack message to #%s...', header['slack'])
+            self._slack.send(to=header['slack'], body=body)
 
 
 __all__ = ['PyBSdaemon']

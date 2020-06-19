@@ -70,6 +70,8 @@ class Job(Base):
                     header['send_mail'] = m.group(2)
                 elif m.group(1) == 'M':
                     header['email'] = m.group(2)
+                elif m.group(1) == 'S':
+                    header['slack'] = m.group(2)
                 elif m.group(1) == 'p':
                     header['priority'] = int(m.group(2))
 

@@ -8,7 +8,7 @@ from itertools import chain
 
 from PyBS import PyBSdaemon
 from PyBS.db import Database
-from PyBS.mailer import Mailer
+from PyBS.mailer import Mailer, Slack
 from PyBS.rpcserver import RpcServer
 
 
@@ -38,6 +38,9 @@ def main():
         host=config.get('mail-host', None)
     )
 
+    # and slack
+    slack = Slack(token=config.get('slack-token', None))
+
     # get asyncio event loop
     loop = asyncio.get_event_loop()
 
@@ -51,6 +54,7 @@ def main():
         daemon = PyBSdaemon(
             database=database,
             mailer=mailer,
+            slack=slack,
             ncpus=int(config.get('ncpus', 4)),
             nodename=config.get('nodename', None),
             root_dir=config.get('root', '/')

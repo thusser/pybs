@@ -3,7 +3,7 @@ from setuptools import setup, find_packages
 
 setup(
     name='PyBS',
-    version='0.2.3',
+    version='0.3',
     description='PyBS - the Python Batch System',
     author='Tim-Oliver Husser',
     author_email='thusser@uni-goettingen.de',
